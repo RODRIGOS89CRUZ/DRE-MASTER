@@ -2,8 +2,8 @@
 
 import streamlit as st
 import pandas as pd
-import openai
 import matplotlib.pyplot as plt
+from openai import OpenAI
 from io import BytesIO
 
 # Função para carregar o arquivo Excel
@@ -14,17 +14,17 @@ def carregar_dre(uploaded_file):
 
 # Função para gerar análise com GPT
 def gerar_analise(dre_df, openai_api_key):
-    openai.api_key = openai_api_key
+    client = OpenAI(api_key=openai_api_key)
     prompt = f"""
     Analise o seguinte Demonstrativo de Resultados do Exercício (DRE) e forneça insights sobre o desempenho financeiro, pontos fortes, pontos de atenção e sugestões de melhoria:
 
     {dre_df.to_string(index=False)}
     """
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 # Função para criar dashboard
 def criar_dashboard(dre_df):
