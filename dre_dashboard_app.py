@@ -44,26 +44,56 @@ def encontrar_coluna(dre_df, opcoes):
             return opcao
     return None
 
-# Função para mostrar KPIs do DRE e tendências
+# Função para gerar relatórios e insights
+
+def gerar_relatorio(dre_df):
+    receita_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['receita_liquida'])
+    lucro_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['lucro_liquido_exercicio'])
+    margem_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['margem_lucro'])
+
+    if receita_col and lucro_col and margem_col:
+        receita = dre_df[receita_col].sum()
+        lucro = dre_df[lucro_col].sum()
+        margem = dre_df[margem_col].mean()
+
+        st.subheader("📋 Relatório de Desempenho")
+        st.write(f"Receita Líquida Total: R$ {receita:,.2f}")
+        st.write(f"Lucro Líquido Total: R$ {lucro:,.2f}")
+        st.write(f"Margem Média de Lucro: {margem:.2f}%")
+
+        st.subheader("💡 Insights Estratégicos")
+        if margem >= 20:
+            st.success("Ótima margem de lucro! Continue mantendo o controle de despesas e otimize ainda mais suas operações.")
+        elif 10 <= margem < 20:
+            st.warning("Margem de lucro razoável. Avalie estratégias para aumentar a eficiência e reduzir custos.")
+        else:
+            st.error("Margem de lucro baixa! Reavalie urgências: custos elevados, necessidade de aumento de vendas ou ajuste de preços.")
+
+# Função para mostrar KPIs, gráficos e relatórios do DRE
 def mostrar_kpis(dre_df):
     st.title("📊 Análise de DRE - Dashboard")
+
+    col_receita = encontrar_coluna(dre_df, COLUNAS_PADRAO['receita_liquida'])
+    col_lucro = encontrar_coluna(dre_df, COLUNAS_PADRAO['lucro_liquido_exercicio'])
+    col_margem = encontrar_coluna(dre_df, COLUNAS_PADRAO['margem_lucro'])
+
+    if not (col_receita or col_lucro or col_margem):
+        st.warning("⚠️ Não foi possível encontrar colunas de Receita Líquida, Lucro Líquido ou Margem de Lucro no seu arquivo. Verifique o layout.")
+        return
 
     colunas_kpi = st.columns(3)
 
     with colunas_kpi[0]:
-        col_receita = encontrar_coluna(dre_df, COLUNAS_PADRAO['receita_liquida'])
         if col_receita:
             receita_total = dre_df[col_receita].sum()
             st.metric("Receita Líquida", f"R$ {receita_total:,.2f}")
 
     with colunas_kpi[1]:
-        col_lucro = encontrar_coluna(dre_df, COLUNAS_PADRAO['lucro_liquido_exercicio'])
         if col_lucro:
             lucro_total = dre_df[col_lucro].sum()
             st.metric("Lucro Líquido", f"R$ {lucro_total:,.2f}")
 
     with colunas_kpi[2]:
-        col_margem = encontrar_coluna(dre_df, COLUNAS_PADRAO['margem_lucro'])
         if col_margem:
             margem_media = dre_df[col_margem].mean()
             st.metric("Margem de Lucro (%)", f"{margem_media:.2f}%")
@@ -72,14 +102,14 @@ def mostrar_kpis(dre_df):
 
     st.subheader("📈 Gráficos Financeiros")
 
-    # Receita vs Custos
     if col_receita and (col_custo := encontrar_coluna(dre_df, COLUNAS_PADRAO['custos_vendas'])):
         fig, ax = plt.subplots(figsize=(8, 4))
-        ax.bar(['Receita Líquida', 'Custos'], [receita_total, dre_df[col_custo].sum()], color=['#2ecc71', '#e74c3c'])
+        ax.bar(['Receita Líquida', 'Custos'], [dre_df[col_receita].sum(), dre_df[col_custo].sum()], color=['#2ecc71', '#e74c3c'])
         ax.set_ylabel('Valor (R$)')
         st.pyplot(fig)
+    else:
+        st.info("ℹ️ Não há dados suficientes para o gráfico de Receita vs Custos.")
 
-    # Pizza de Despesas Operacionais
     col_desp_op = encontrar_coluna(dre_df, COLUNAS_PADRAO['despesas_operacionais'])
     col_desp_fin = encontrar_coluna(dre_df, COLUNAS_PADRAO['despesas_financeiras'])
     if col_desp_op and col_desp_fin:
@@ -89,8 +119,9 @@ def mostrar_kpis(dre_df):
         ax2.pie(valores, labels=labels, autopct='%1.1f%%', startangle=90)
         ax2.axis('equal')
         st.pyplot(fig2)
+    else:
+        st.info("ℹ️ Não há dados suficientes para o gráfico de despesas.")
 
-    # Tendência de Receita Líquida e Lucro
     if 'Período' in dre_df.columns and col_receita and col_lucro:
         st.subheader("📈 Tendência de Receita e Lucro ao longo do Tempo")
         fig3, ax3 = plt.subplots(figsize=(10, 5))
@@ -106,6 +137,10 @@ def mostrar_kpis(dre_df):
         tendencia_lucro = "crescente" if dre_df[col_lucro].iloc[-1] > dre_df[col_lucro].iloc[0] else "decrescente"
 
         st.info(f"📈 Tendência de Receita: {tendencia_receita.capitalize()}\n\n📈 Tendência de Lucro: {tendencia_lucro.capitalize()}")
+    else:
+        st.info("ℹ️ Tendência não disponível: coluna 'Período' ou dados insuficientes.")
+
+    gerar_relatorio(dre_df)
 
 # Código principal
 uploaded_file = st.sidebar.file_uploader("📂 Envie o seu arquivo de DRE", type=["xlsx"])
