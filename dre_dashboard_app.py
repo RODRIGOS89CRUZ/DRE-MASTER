@@ -32,7 +32,7 @@ example_data = pd.DataFrame({
     'Tipo Despesa': ['Fixo', 'Variável', 'Fixo']
 })
 example_file = BytesIO()
-with pd.ExcelWriter(example_file, engine='xlsxwriter') as writer:
+with pd.ExcelWriter(example_file, engine='openpyxl') as writer:
     example_data.to_excel(writer, index=False, sheet_name='DRE')
 example_file.seek(0)
 
