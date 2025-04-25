@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import streamlit as st
 import pandas as pd
 import openai
@@ -26,7 +28,7 @@ def gerar_analise(dre_df, openai_api_key):
 
 # Função para criar dashboard
 def criar_dashboard(dre_df):
-    st.subheader("\ud83d\udcca Dashboard Financeiro")
+    st.subheader("📊 Dashboard Financeiro")
 
     if 'Receita' in dre_df.columns and 'Lucro' in dre_df.columns:
         fig, ax = plt.subplots()
@@ -49,14 +51,14 @@ def criar_dashboard(dre_df):
         st.line_chart(dre_df.set_index('Período')['Margem (%)'])
 
 # App principal
-st.set_page_config(page_title="DreMaster - Inteligência Financeira", layout="wide", page_icon="\ud83d\udcca")
-st.title("\ud83d\udcc8 DreMaster: Seu DRE, Sua Inteligência Financeira")
+st.set_page_config(page_title="DreMaster - Inteligência Financeira", layout="wide", page_icon="📊")
+st.title("📈 DreMaster: Seu DRE, Sua Inteligência Financeira")
 
 with st.sidebar:
     st.image("https://img.icons8.com/ios-filled/100/000000/financial-growth-analysis.png", width=100)
-    st.header("\ud83d\udd11 Configurações")
+    st.header("🔑 Configurações")
     openai_api_key = st.text_input("Insira sua OpenAI API Key (opcional para análise GPT)", type="password")
-    uploaded_file = st.file_uploader("\ud83d\udcc2 Envie seu arquivo Excel do DRE", type=["xlsx"])
+    uploaded_file = st.file_uploader("📂 Envie seu arquivo Excel do DRE", type=["xlsx"])
 
 if uploaded_file:
     dre_df = carregar_dre(uploaded_file)
@@ -65,15 +67,15 @@ if uploaded_file:
         st.success("Arquivo carregado com sucesso!")
         st.dataframe(dre_df, use_container_width=True)
 
-        if st.button("\ud83d\udcca Gerar Dashboard e Análise"):
-            with st.spinner("\u23f3 Gerando análise e visualizações..."):
+        if st.button("📊 Gerar Dashboard e Análise"):
+            with st.spinner("⏳ Gerando análise e visualizações..."):
                 criar_dashboard(dre_df)
 
                 if openai_api_key:
                     analise = gerar_analise(dre_df, openai_api_key)
-                    st.subheader("\ud83d\udd0d Análise GPT")
+                    st.subheader("🔍 Análise GPT")
                     st.write(analise)
                 else:
-                    st.info("\ud83d\udd39 Chave da API não fornecida: exibindo apenas o Dashboard.")
+                    st.info("🔹 Chave da API não fornecida: exibindo apenas o Dashboard.")
 else:
-    st.info("\ud83d\udd39 Para começar, envie um arquivo do DRE na barra lateral.")
+    st.info("🔹 Para começar, envie um arquivo do DRE na barra lateral.")
