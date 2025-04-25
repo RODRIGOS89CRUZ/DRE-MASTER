@@ -16,31 +16,70 @@ def criar_dashboard(dre_df):
     st.markdown("## 📊 Dashboard Financeiro", unsafe_allow_html=True)
     st.divider()
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if 'Receita' in dre_df.columns and 'Lucro' in dre_df.columns:
-            fig, ax = plt.subplots(figsize=(8, 5))
-            ax.plot(dre_df['Período'], dre_df['Receita'], marker='o', label='Receita')
-            ax.plot(dre_df['Período'], dre_df['Lucro'], marker='o', label='Lucro')
-            ax.set_xlabel('Período')
-            ax.set_ylabel('Valores (R$)')
-            ax.set_title('Receita vs Lucro')
-            ax.grid(True)
-            ax.legend()
-            st.pyplot(fig)
-
-    with col2:
-        if 'Custo' in dre_df.columns:
-            st.markdown("### 📉 Custos por Período")
-            st.bar_chart(dre_df.set_index('Período')['Custo'])
+    # Receita e Lucro
+    if 'Receita' in dre_df.columns and 'Lucro' in dre_df.columns:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(dre_df['Período'], dre_df['Receita'], marker='o', label='Receita')
+        ax.plot(dre_df['Período'], dre_df['Lucro'], marker='o', label='Lucro')
+        ax.set_xlabel('Período')
+        ax.set_ylabel('Valores (R$)')
+        ax.set_title('Receita vs Lucro')
+        ax.grid(True)
+        ax.legend()
+        st.pyplot(fig)
 
     st.divider()
 
+    # Custos
+    if 'Custo' in dre_df.columns:
+        st.markdown("### 📉 Custos por Período")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.bar(dre_df['Período'], dre_df['Custo'], color='red')
+        ax.set_xlabel('Período')
+        ax.set_ylabel('Custo (R$)')
+        ax.set_title('Evolução dos Custos')
+        st.pyplot(fig)
+
+    st.divider()
+
+    # Margem de Lucro
     if 'Lucro' in dre_df.columns and 'Receita' in dre_df.columns:
         st.markdown("### 📈 Margem de Lucro (%)")
         dre_df['Margem (%)'] = (dre_df['Lucro'] / dre_df['Receita']) * 100
-        st.line_chart(dre_df.set_index('Período')['Margem (%)'])
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(dre_df['Período'], dre_df['Margem (%)'], marker='o', color='green')
+        ax.set_xlabel('Período')
+        ax.set_ylabel('Margem (%)')
+        ax.set_title('Margem de Lucro ao longo do tempo')
+        ax.grid(True)
+        st.pyplot(fig)
+
+    st.divider()
+
+    # Análise detalhada
+    st.markdown("## 🧮 Análise Detalhada")
+
+    if 'Tipo Receita' in dre_df.columns:
+        st.markdown("### 📥 Receita por Tipo")
+        receita_tipo = dre_df.groupby('Tipo Receita')['Receita'].sum()
+        st.bar_chart(receita_tipo)
+
+    if 'Tipo Despesa' in dre_df.columns:
+        st.markdown("### 📤 Despesas por Tipo")
+        despesa_tipo = dre_df.groupby('Tipo Despesa')['Custo'].sum()
+        st.bar_chart(despesa_tipo)
+
+    if 'Custo' in dre_df.columns:
+        st.markdown("### 🔻 Reduções e Aumentos de Custos")
+        dre_df['Variação de Custo'] = dre_df['Custo'].diff()
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(dre_df['Período'], dre_df['Variação de Custo'], marker='o', color='purple')
+        ax.axhline(0, color='gray', linestyle='--')
+        ax.set_xlabel('Período')
+        ax.set_ylabel('Variação de Custo (R$)')
+        ax.set_title('Reduções e Aumentos de Custos por Período')
+        ax.grid(True)
+        st.pyplot(fig)
 
 # App principal
 st.set_page_config(page_title="DreMaster - Inteligência Financeira", layout="wide", page_icon="📊")
