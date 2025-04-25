@@ -6,8 +6,16 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import time
 
+# Função para carregar o arquivo Excel do DRE
+def carregar_dre(uploaded_file):
+    try:
+        return pd.read_excel(uploaded_file, engine='openpyxl')
+    except Exception as e:
+        st.error(f"Erro ao carregar o arquivo: {e}")
+        return None
+
 # (Todas as funções que você já criou permanecem aqui, conforme estão)
-# carregar_dre, gerar_relatorio, gerar_analise, gerar_insights_avancados, analisar_tendencias, criar_dashboard
+# gerar_relatorio, gerar_analise, gerar_insights_avancados, analisar_tendencias, criar_dashboard
 
 # Código principal para rodar o app
 st.set_page_config(page_title="DreMaster - Dashboard Financeiro", layout="wide")
@@ -44,13 +52,13 @@ st.sidebar.download_button(
 )
 
 # Upload de arquivo do usuário
-uploaded_file = st.sidebar.file_uploader("📂 Envie seu arquivo Excel do DRE", type=["xlsx"])
+uploaded_file = st.sidebar.file_uploader("📂 Faça upload do seu DRE em Excel", type=["xlsx"])
 
 if uploaded_file:
     dre_df = carregar_dre(uploaded_file)
 
     if dre_df is not None:
-        with st.spinner("🔄 Processando seu DRE e carregando dashboards..."):
+        with st.spinner("🔄 Analisando seu DRE e preparando os gráficos..."):
             time.sleep(2)
             st.success("✅ Arquivo carregado com sucesso!")
 
@@ -84,7 +92,7 @@ if uploaded_file:
             st.divider()
 
             # Gráficos de Pizza Receita e Despesa
-            st.subheader("📊 Distribuição de Receita e Despesa")
+            st.subheader("📊 Análise de Receita e Despesa por Categoria")
             col1, col2 = st.columns(2)
 
             with col1:
@@ -106,7 +114,7 @@ if uploaded_file:
             st.divider()
 
             # Gráfico Comparativo Lucro Mês a Mês
-            st.subheader("📈 Evolução do Lucro mês a mês")
+            st.subheader("📈 Lucro Mensal: Evolução ao longo do tempo")
             if 'Período' in dre_df.columns and 'Lucro' in dre_df.columns:
                 fig3, ax3 = plt.subplots(figsize=(10,5))
                 ax3.plot(dre_df['Período'], dre_df['Lucro'], marker='o', linestyle='-', color='#1f77b4')
@@ -116,7 +124,7 @@ if uploaded_file:
                 ax3.grid(True)
                 st.pyplot(fig3)
 else:
-    st.info("📥 Para começar, envie seu arquivo Excel na barra lateral ou baixe o exemplo para testar.")
+    st.info("📥 Comece enviando seu DRE na barra lateral ou baixe o exemplo para testar agora.")
 
 # Estilo adicional
 st.markdown("""
