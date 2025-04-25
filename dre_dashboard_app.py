@@ -4,7 +4,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from scipy.signal import find_peaks
 
 # Função para carregar o arquivo Excel
 def carregar_dre(uploaded_file):
@@ -72,21 +71,20 @@ def gerar_insights_avancados(dre_df):
 
     return insights
 
-# Função para detectar tendências e padrões
+# Função para detectar tendências e padrões sem scipy
 def analisar_tendencias(dre_df):
     texto = "\n\n🔍 **Análise de Tendências:**\n"
     if 'Receita' in dre_df.columns and 'Custo' in dre_df.columns:
         fluxo = (dre_df['Receita'] - dre_df['Custo']).cumsum()
         fluxo_diff = fluxo.diff().fillna(0)
 
-        # Encontrar picos de alta e baixa
-        picos, _ = find_peaks(fluxo_diff)
-        vales, _ = find_peaks(-fluxo_diff)
+        crescimento = (fluxo_diff > 0).sum()
+        quedas = (fluxo_diff < 0).sum()
 
-        if len(picos) > 0:
-            texto += f"🔹 Foram encontrados {len(picos)} períodos de crescimento acentuado de caixa.\n"
-        if len(vales) > 0:
-            texto += f"🔹 Foram identificados {len(vales)} períodos de queda significativa no fluxo de caixa.\n"
+        if crescimento > 0:
+            texto += f"🔹 Foram encontrados {crescimento} períodos de crescimento do fluxo de caixa.\n"
+        if quedas > 0:
+            texto += f"🔹 Foram identificados {quedas} períodos de queda no fluxo de caixa.\n"
 
         if fluxo_diff.mean() > 0:
             texto += "🔹 Tendência geral: crescimento financeiro positivo ao longo do tempo.\n"
@@ -99,7 +97,6 @@ def criar_dashboard(dre_df):
     st.markdown("# 📊 Painel Financeiro - DreMaster", unsafe_allow_html=True)
     st.divider()
 
-    # KPIs principais
     receita_total = dre_df['Receita'].sum() if 'Receita' in dre_df.columns else 0
     custo_total = dre_df['Custo'].sum() if 'Custo' in dre_df.columns else 0
     lucro_total = dre_df['Lucro'].sum() if 'Lucro' in dre_df.columns else 0
@@ -113,7 +110,6 @@ def criar_dashboard(dre_df):
 
     st.divider()
 
-    # Gráficos Receita vs Lucro
     if 'Receita' in dre_df.columns and 'Lucro' in dre_df.columns:
         st.subheader("📈 Receita vs Lucro")
         fig, ax = plt.subplots(figsize=(12, 6))
@@ -129,7 +125,6 @@ def criar_dashboard(dre_df):
 
     st.divider()
 
-    # Gráfico de Custos
     if 'Custo' in dre_df.columns:
         st.subheader("📉 Evolução dos Custos")
         fig, ax = plt.subplots(figsize=(12, 6))
@@ -142,7 +137,6 @@ def criar_dashboard(dre_df):
 
     st.divider()
 
-    # Fluxo de Caixa Acumulado
     if 'Receita' in dre_df.columns and 'Custo' in dre_df.columns:
         st.subheader("💸 Fluxo de Caixa Acumulado")
         fluxo_caixa = (dre_df['Receita'] - dre_df['Custo']).cumsum()
@@ -156,7 +150,6 @@ def criar_dashboard(dre_df):
 
     st.divider()
 
-    # Botão para download do relatório
     relatorio = gerar_relatorio(dre_df)
     st.download_button(
         label="📥 Baixar Relatório Excel",
@@ -165,14 +158,11 @@ def criar_dashboard(dre_df):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    # Mostrar análise simples
     st.subheader("🧠 Análise e Recomendações")
     st.info(gerar_analise(dre_df))
 
-    # Mostrar análise de tendências
     st.subheader("📊 Análise de Tendências e Padrões")
     st.success(analisar_tendencias(dre_df))
 
-    # Mostrar insights avançados
     st.subheader("🔮 Insights Estratégicos Avançados")
     st.success(gerar_insights_avancados(dre_df))
