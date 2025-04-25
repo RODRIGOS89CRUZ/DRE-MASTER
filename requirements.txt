@@ -1,9 +1,4 @@
 streamlit
-openai
-pandas
-matplotlib
-openpyxl
-streamlit
 pandas
 matplotlib
 openpyxl
