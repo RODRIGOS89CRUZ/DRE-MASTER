@@ -9,7 +9,7 @@ from io import BytesIO
 # Função para carregar o arquivo Excel
 def carregar_dre(uploaded_file):
     if uploaded_file:
-        return pd.read_excel(uploaded_file)
+        return pd.read_excel(uploaded_file, engine='openpyxl')
     return None
 
 # Função para gerar análise com GPT
