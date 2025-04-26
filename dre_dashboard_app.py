@@ -5,12 +5,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
 import time
+import re
+from fpdf import FPDF
+
+# Função para limpar e padronizar nomes de colunas
+def padronizar_nome(coluna):
+    coluna = coluna.lower()
+    coluna = re.sub(r'[^a-zA-Z0-9 ]', '', coluna)
+    coluna = coluna.strip()
+    return coluna
 
 # Função para carregar o arquivo Excel do DRE
 def carregar_dre(uploaded_file):
     try:
         df = pd.read_excel(uploaded_file, engine='openpyxl')
-        df.columns = df.columns.str.strip()
+        df.columns = [padronizar_nome(col) for col in df.columns]
         return df
     except Exception as e:
         st.error(f"Erro ao carregar o arquivo: {e}")
@@ -18,137 +27,77 @@ def carregar_dre(uploaded_file):
 
 # Mapeamento estruturado com base no modelo correto de um DRE
 COLUNAS_PADRAO = {
-    'receita_bruta': ['RECEITA MENSAL BANCÁRIA', 'RECEITA OPERACIONAL BRUTA'],
-    'deducoes': ['(-) DEDUÇÕES DA RECEITA BRUTA'],
-    'receita_liquida': ['= RECEITA OPERACIONAL LÍQUIDA'],
-    'custos_vendas': ['(-) CUSTOS DAS VENDAS'],
-    'resultado_operacional_bruto': ['= RESULTADO OPERACIONAL BRUTO'],
-    'despesas_operacionais': ['(-) DESPESAS OPERACIONAIS'],
-    'despesas_financeiras': ['(-) DESPESAS FINANCEIRAS LÍQUIDAS'],
-    'outras_receitas_despesas': ['OUTRAS RECEITAS E DESPESAS'],
-    'resultado_operacional_antes_ir': ['= RESULTADO OPERACIONAL ANTES DO IR E CSLL'],
-    'lucro_antes_participacoes': ['= LUCRO LÍQUIDO ANTES DAS PARTICIPAÇÕES'],
-    'pro_labore': ['(-) PRO LABORE'],
-    'lucro_liquido_exercicio': ['(=) RESULTADO LÍQUIDO DO EXERCÍCIO'],
-    'fluxo_caixa': ['(=) RESULTADO BANCÁRIO - LÍQUIDO - FLUXO DE CAIXA'],
-    'ebit': ['Resultado Operacional (Ebit)'],
-    'ebitda': ['EBITDA (Ebit+Depreciações)'],
-    'resultado_final': ['Resultado Final'],
-    'margem_lucro': ['PORCENTAGEM DE LUCRO LÍQUIDO (%)']
+    'receita_liquida': ['receita operacional liquida', 'receita liquida'],
+    'custos_vendas': ['custos das vendas', 'custo dos produtos vendidos'],
+    'lucro_liquido_exercicio': ['resultado liquido do exercicio', 'lucro liquido'],
+    'margem_lucro': ['porcentagem de lucro liquido', 'margem de lucro'],
+    'ebitda': ['ebitda', 'resultado operacional antes de depreciação e amortização'],
+    'ebit': ['ebit', 'resultado operacional'],
+    'fluxo_caixa': ['resultado bancario liquido fluxo de caixa', 'fluxo de caixa']
 }
 
 # Função utilitária para encontrar coluna no DataFrame
 def encontrar_coluna(dre_df, opcoes):
     for opcao in opcoes:
-        if opcao in dre_df.columns:
-            return opcao
+        for coluna in dre_df.columns:
+            if opcao in coluna:
+                return coluna
     return None
 
-# Função para gerar relatórios e insights
+# Função para gerar relatório em PDF
+def gerar_pdf(receita_total, lucro_total, margem_media):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Relatório de Análise de DRE", ln=True, align='C')
+    pdf.ln(10)
+    pdf.cell(200, 10, txt=f"Receita Líquida Total: R$ {receita_total:,.2f}", ln=True)
+    pdf.cell(200, 10, txt=f"Lucro Líquido Total: R$ {lucro_total:,.2f}", ln=True)
+    pdf.cell(200, 10, txt=f"Margem de Lucro Média: {margem_media:.2f}%", ln=True)
+    pdf.ln(10)
+    pdf.cell(200, 10, txt="Análises Adicionais (em breve)", ln=True)
+    return pdf
 
-def gerar_relatorio(dre_df):
-    receita_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['receita_liquida'])
-    lucro_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['lucro_liquido_exercicio'])
-    margem_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['margem_lucro'])
+# Função para salvar PDF em bytes
+def salvar_pdf_em_bytes(pdf):
+    pdf_output = BytesIO()
+    pdf.output(pdf_output)
+    pdf_output.seek(0)
+    return pdf_output
 
-    if receita_col and lucro_col and margem_col:
-        receita = dre_df[receita_col].sum()
-        lucro = dre_df[lucro_col].sum()
-        margem = dre_df[margem_col].mean()
+# Novo: Função de Inicialização
+def iniciar_dashboard():
+    st.title("📊 DreMaster - Inteligência Financeira Avançada")
 
-        st.subheader("📋 Relatório de Desempenho")
-        st.write(f"Receita Líquida Total: R$ {receita:,.2f}")
-        st.write(f"Lucro Líquido Total: R$ {lucro:,.2f}")
-        st.write(f"Margem Média de Lucro: {margem:.2f}%")
+    uploaded_file = st.sidebar.file_uploader("📂 Faça o upload do seu arquivo DRE (Excel)", type=["xlsx"])
 
-        st.subheader("💡 Insights Estratégicos")
-        if margem >= 20:
-            st.success("Ótima margem de lucro! Continue mantendo o controle de despesas e otimize ainda mais suas operações.")
-        elif 10 <= margem < 20:
-            st.warning("Margem de lucro razoável. Avalie estratégias para aumentar a eficiência e reduzir custos.")
-        else:
-            st.error("Margem de lucro baixa! Reavalie urgências: custos elevados, necessidade de aumento de vendas ou ajuste de preços.")
+    if uploaded_file:
+        dre_df = carregar_dre(uploaded_file)
 
-# Função para mostrar KPIs, gráficos e relatórios do DRE
-def mostrar_kpis(dre_df):
-    st.title("📊 Análise de DRE - Dashboard")
+        if dre_df is not None:
+            receita_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['receita_liquida'])
+            lucro_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['lucro_liquido_exercicio'])
+            margem_col = encontrar_coluna(dre_df, COLUNAS_PADRAO['margem_lucro'])
 
-    col_receita = encontrar_coluna(dre_df, COLUNAS_PADRAO['receita_liquida'])
-    col_lucro = encontrar_coluna(dre_df, COLUNAS_PADRAO['lucro_liquido_exercicio'])
-    col_margem = encontrar_coluna(dre_df, COLUNAS_PADRAO['margem_lucro'])
+            if receita_col and lucro_col and margem_col:
+                receita_total = dre_df[receita_col].sum()
+                lucro_total = dre_df[lucro_col].sum()
+                margem_media = dre_df[margem_col].mean()
 
-    if not (col_receita or col_lucro or col_margem):
-        st.warning("⚠️ Não foi possível encontrar colunas de Receita Líquida, Lucro Líquido ou Margem de Lucro no seu arquivo. Verifique o layout.")
-        return
+                st.metric("Receita Líquida Total", f"R$ {receita_total:,.2f}")
+                st.metric("Lucro Líquido Total", f"R$ {lucro_total:,.2f}")
+                st.metric("Margem de Lucro Média", f"{margem_media:.2f}%")
 
-    colunas_kpi = st.columns(3)
+                pdf = gerar_pdf(receita_total, lucro_total, margem_media)
+                pdf_bytes = salvar_pdf_em_bytes(pdf)
+                st.download_button(label="📄 Baixar Relatório em PDF", data=pdf_bytes, file_name="relatorio_dre.pdf", mime="application/pdf")
 
-    with colunas_kpi[0]:
-        if col_receita:
-            receita_total = dre_df[col_receita].sum()
-            st.metric("Receita Líquida", f"R$ {receita_total:,.2f}")
+                st.success("Análise concluída com sucesso! Mais recursos avançados serão carregados na próxima fase.")
+            else:
+                st.warning("⚠️ Algumas colunas essenciais não foram encontradas no seu arquivo. Verifique o modelo utilizado.")
 
-    with colunas_kpi[1]:
-        if col_lucro:
-            lucro_total = dre_df[col_lucro].sum()
-            st.metric("Lucro Líquido", f"R$ {lucro_total:,.2f}")
-
-    with colunas_kpi[2]:
-        if col_margem:
-            margem_media = dre_df[col_margem].mean()
-            st.metric("Margem de Lucro (%)", f"{margem_media:.2f}%")
-
-    st.divider()
-
-    st.subheader("📈 Gráficos Financeiros")
-
-    if col_receita and (col_custo := encontrar_coluna(dre_df, COLUNAS_PADRAO['custos_vendas'])):
-        fig, ax = plt.subplots(figsize=(8, 4))
-        ax.bar(['Receita Líquida', 'Custos'], [dre_df[col_receita].sum(), dre_df[col_custo].sum()], color=['#2ecc71', '#e74c3c'])
-        ax.set_ylabel('Valor (R$)')
-        st.pyplot(fig)
     else:
-        st.info("ℹ️ Não há dados suficientes para o gráfico de Receita vs Custos.")
+        st.info("Por favor, envie seu arquivo de DRE para iniciar a análise.")
 
-    col_desp_op = encontrar_coluna(dre_df, COLUNAS_PADRAO['despesas_operacionais'])
-    col_desp_fin = encontrar_coluna(dre_df, COLUNAS_PADRAO['despesas_financeiras'])
-    if col_desp_op and col_desp_fin:
-        fig2, ax2 = plt.subplots()
-        valores = [dre_df[col_desp_op].sum(), dre_df[col_desp_fin].sum()]
-        labels = ['Despesas Operacionais', 'Despesas Financeiras']
-        ax2.pie(valores, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax2.axis('equal')
-        st.pyplot(fig2)
-    else:
-        st.info("ℹ️ Não há dados suficientes para o gráfico de despesas.")
-
-    if 'Período' in dre_df.columns and col_receita and col_lucro:
-        st.subheader("📈 Tendência de Receita e Lucro ao longo do Tempo")
-        fig3, ax3 = plt.subplots(figsize=(10, 5))
-        ax3.plot(dre_df['Período'], dre_df[col_receita], label='Receita Líquida', marker='o')
-        ax3.plot(dre_df['Período'], dre_df[col_lucro], label='Lucro Líquido', marker='s')
-        ax3.set_xlabel('Período')
-        ax3.set_ylabel('Valor (R$)')
-        ax3.legend()
-        ax3.grid(True)
-        st.pyplot(fig3)
-
-        tendencia_receita = "crescente" if dre_df[col_receita].iloc[-1] > dre_df[col_receita].iloc[0] else "decrescente"
-        tendencia_lucro = "crescente" if dre_df[col_lucro].iloc[-1] > dre_df[col_lucro].iloc[0] else "decrescente"
-
-        st.info(f"📈 Tendência de Receita: {tendencia_receita.capitalize()}\n\n📈 Tendência de Lucro: {tendencia_lucro.capitalize()}")
-    else:
-        st.info("ℹ️ Tendência não disponível: coluna 'Período' ou dados insuficientes.")
-
-    gerar_relatorio(dre_df)
-
-# Código principal
-uploaded_file = st.sidebar.file_uploader("📂 Envie o seu arquivo de DRE", type=["xlsx"])
-
-if uploaded_file:
-    dre_df = carregar_dre(uploaded_file)
-
-    if dre_df is not None:
-        mostrar_kpis(dre_df)
-else:
-    st.info("📥 Faça upload de um arquivo Excel (.xlsx) com os dados do seu DRE para iniciar a análise.")
+# Rodar o app
+iniciar_dashboard()
